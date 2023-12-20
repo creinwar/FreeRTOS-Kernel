@@ -91,7 +91,16 @@ typedef portUBASE_TYPE   TickType_t;
 
 /* Scheduler utilities. */
 extern void vTaskSwitchContext( void );
-#define portYIELD()                __asm volatile ( "ecall" );
+// Use an IPI call to our own HART as yield
+#define portYIELD()                __asm volatile(\
+                                     "add a0, x0, %0\n      \
+                                      add a1, x0, %1\n      \
+                                      add a6, x0, %2\n      \
+                                      add a7, x0, %3\n      \
+                                      ecall\n"              \
+                                      :: "r"(1), "r"(0),    \
+                                      "r"(0), "r"(0x735049) \
+                                      : "a0", "a1", "a6", "a7");
 #define portEND_SWITCHING_ISR( xSwitchRequired ) \
     do                                           \
     {                                            \
@@ -114,8 +123,8 @@ extern void vTaskSwitchContext( void );
 #define portSET_INTERRUPT_MASK_FROM_ISR()                          0
 #define portCLEAR_INTERRUPT_MASK_FROM_ISR( uxSavedStatusValue )    ( void ) uxSavedStatusValue
 
-#define portDISABLE_INTERRUPTS()                                   __asm volatile ( "csrc mstatus, 8" )
-#define portENABLE_INTERRUPTS()                                    __asm volatile ( "csrs mstatus, 8" )
+#define portDISABLE_INTERRUPTS()                                   __asm volatile ( "csrc sstatus, 2" )
+#define portENABLE_INTERRUPTS()                                    __asm volatile ( "csrs sstatus, 2" )
 
 extern size_t xCriticalNesting;
 #define portENTER_CRITICAL()      \

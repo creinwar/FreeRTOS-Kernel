@@ -196,14 +196,13 @@ definitions. */
  * pxCode
  */
 pxPortInitialiseStack:
-    csrr t0, mstatus                    /* Obtain current mstatus value. */
-    andi t0, t0, ~0x8                   /* Ensure interrupts are disabled when the stack is restored within an ISR.  Required when a task is created after the schedulre has been started, otherwise interrupts would be disabled anyway. */
-    addi t1, x0, 0x188                  /* Generate the value 0x1880, which are the MPIE and MPP bits to set in mstatus. */
-    slli t1, t1, 4
-    or t0, t0, t1                       /* Set MPIE and MPP bits in mstatus value. */
+    csrr t0, sstatus                    /* Obtain current mstatus value. */
+    andi t0, t0, ~0x2                   /* Ensure interrupts are disabled when the stack is restored within an ISR.  Required when a task is created after the schedulre has been started, otherwise interrupts would be disabled anyway. */
+    addi t1, x0, 0x120                  /* Generate the value 0x120, which are the SPIE and SPP bits to set in sstatus. */
+    or t0, t0, t1                       /* Set SPIE and SPP bits in sstatus value. */
 
     addi a0, a0, -portWORD_SIZE
-    store_x t0, 0(a0)                   /* mstatus onto the stack. */
+    store_x t0, 0(a0)                   /* sstatus onto the stack. */
     addi a0, a0, -portWORD_SIZE         /* Space for critical nesting count. */
     store_x x0, 0(a0)                   /* Critical nesting count starts at 0 for every task. */
 
@@ -270,8 +269,8 @@ xPortStartFirstTask:
     store_x x5, 0( x6 )                     /* Restore the critical nesting value for this task. */
 
     load_x  x5, portMSTATUS_OFFSET * portWORD_SIZE( sp )    /* Initial mstatus into x5 (t0). */
-    addi    x5, x5, 0x08                    /* Set MIE bit so the first task starts with interrupts enabled - required as returns with ret not eret. */
-    csrrw   x0, mstatus, x5                 /* Interrupts enabled from here! */
+    addi    x5, x5, 0x02                    /* Set SIE bit so the first task starts with interrupts enabled - required as returns with ret not eret. */
+    csrrw   x0, sstatus, x5                 /* Interrupts enabled from here! */
 
     load_x  x5, 2 * portWORD_SIZE( sp )     /* Initial x5 (t0) value. */
     load_x  x6, 3 * portWORD_SIZE( sp )     /* Initial x6 (t1) value. */
@@ -281,16 +280,16 @@ xPortStartFirstTask:
 /*-----------------------------------------------------------*/
 
 freertos_risc_v_application_exception_handler:
-    csrr t0, mcause     /* For viewing in the debugger only. */
-    csrr t1, mepc       /* For viewing in the debugger only */
-    csrr t2, mstatus    /* For viewing in the debugger only */
+    csrr t0, scause     /* For viewing in the debugger only. */
+    csrr t1, sepc       /* For viewing in the debugger only */
+    csrr t2, sstatus    /* For viewing in the debugger only */
     j .
 /*-----------------------------------------------------------*/
 
 freertos_risc_v_application_interrupt_handler:
-    csrr t0, mcause     /* For viewing in the debugger only. */
-    csrr t1, mepc       /* For viewing in the debugger only */
-    csrr t2, mstatus    /* For viewing in the debugger only */
+    csrr t0, scause     /* For viewing in the debugger only. */
+    csrr t1, sepc       /* For viewing in the debugger only */
+    csrr t2, sstatus    /* For viewing in the debugger only */
     j .
 /*-----------------------------------------------------------*/
 
@@ -331,8 +330,8 @@ exit_without_context_switch:
 freertos_risc_v_trap_handler:
     portcontextSAVE_CONTEXT_INTERNAL
 
-    csrr a0, mcause
-    csrr a1, mepc
+    csrr a0, scause
+    csrr a1, sepc
 
     bge a0, x0, synchronous_exception
 

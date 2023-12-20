@@ -103,7 +103,7 @@ load_x t0, xCriticalNesting                                   /* Load the value 
 store_x t0, portCRITICAL_NESTING_OFFSET * portWORD_SIZE( sp ) /* Store the critical nesting value to the stack. */
 
 
-csrr t0, mstatus /* Required for MPIE bit. */
+csrr t0, sstatus /* Required for MPIE bit. */
 store_x t0, portMSTATUS_OFFSET * portWORD_SIZE( sp )
 
 
@@ -117,8 +117,8 @@ store_x sp, 0 ( t0 )             /* Write sp to first TCB member. */
 
    .macro portcontextSAVE_EXCEPTION_CONTEXT
 portcontextSAVE_CONTEXT_INTERNAL
-csrr a0, mcause
-csrr a1, mepc
+csrr a0, scause
+csrr a1, sepc
 addi a1, a1, 4          /* Synchronous so update exception return address to the instruction after the instruction that generated the exception. */
 store_x a1, 0 ( sp )    /* Save updated exception return address. */
 load_x sp, xISRStackTop /* Switch to ISR stack. */
@@ -127,8 +127,8 @@ load_x sp, xISRStackTop /* Switch to ISR stack. */
 
    .macro portcontextSAVE_INTERRUPT_CONTEXT
 portcontextSAVE_CONTEXT_INTERNAL
-csrr a0, mcause
-csrr a1, mepc
+csrr a0, scause
+csrr a1, sepc
 store_x a1, 0 ( sp )    /* Asynchronous interrupt so save unmodified exception return address. */
 load_x sp, xISRStackTop /* Switch to ISR stack. */
    .endm
@@ -140,14 +140,14 @@ load_x sp, 0 ( t1 )     /* Read sp from first TCB member. */
 
 /* Load mepc with the address of the instruction in the task to run next. */
 load_x t0, 0 ( sp )
-csrw mepc, t0
+csrw sepc, t0
 
 /* Defined in freertos_risc_v_chip_specific_extensions.h to restore any registers unique to the RISC-V implementation. */
 portasmRESTORE_ADDITIONAL_REGISTERS
 
 /* Load mstatus with the interrupt enable bits used by the task. */
 load_x t0, portMSTATUS_OFFSET * portWORD_SIZE( sp )
-csrw mstatus, t0                                             /* Required for MPIE bit. */
+csrw sstatus, t0                                             /* Required for MPIE bit. */
 
 load_x t0, portCRITICAL_NESTING_OFFSET * portWORD_SIZE( sp ) /* Obtain xCriticalNesting value for this task from task's stack. */
 load_x t1, pxCriticalNesting                                 /* Load the address of xCriticalNesting into t1. */
@@ -185,7 +185,7 @@ load_x x15, 12 * portWORD_SIZE( sp )
 #endif /* ifndef __riscv_32e */
 addi sp, sp, portCONTEXT_SIZE
 
-mret
+sret
    .endm
 /*-----------------------------------------------------------*/
 
